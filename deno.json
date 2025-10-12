@@ -1,0 +1,23 @@
+{
+  "exclude": ["server/**"],
+  "lint": {
+    "include": ["supabase/", "test/"],
+    "rules": {
+      "tags": ["recommended"],
+      "exclude": ["no-explicit-any"]
+    }
+  },
+  "importMap": "./supabase/functions/import_map.json",
+  "tasks": {
+    "deploy": "supabase functions deploy contact --import-map ./supabase/functions/import_map.json && supabase secrets set --env-file prod.env",
+    "local": "supabase start && supabase functions serve --no-verify-jwt stripe-webhook --env-file .env --import-map ./supabase/functions/import_map.json",
+    "gentypes": "npx -y supabase gen types typescript --project-id ywdbdzcdnpusijyanlbj --schema public > ./supabase/functions/_shared/types/supabase.ts && deno run --allow-read --allow-write ./supabase/functions/_shared/types/scripts/process-types.ts",
+    "gentypesLocal": "npx -y supabase gen types typescript --local --schema public > ./supabase/functions/_shared/types/supabase.ts && deno run --allow-read --allow-write ./supabase/functions/_shared/types/scripts/process-types.ts",
+    "gentypesLocalWeb": "npx -y supabase gen types typescript --local --schema public > ../../jzai-website/src/types/database.types.ts",
+    "dbReset": "supabase db reset",
+    "dbUpdate": "supabase migrations up",
+    "scrape": "deno run  --allow-read --allow-net --allow-env supabase/scraping/scrape.ts",
+    "stripe": "stripe listen --forward-to localhost:54321/functions/v1/stripe-webhook",
+    "secrets": "supabase secrets set --env-file prod.env"
+  }
+}
