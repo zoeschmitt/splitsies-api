@@ -6,7 +6,6 @@
       "exclude": ["no-explicit-any"]
     }
   },
-  "importMap": "./supabase/functions/import_map.json",
   "tasks": {
     "deploy": "supabase functions deploy --import-map ./supabase/functions/import_map.json && supabase secrets set --env-file prod.env",
     "local": "supabase start && supabase functions serve --no-verify-jwt --env-file .env --import-map ./supabase/functions/import_map.json",
