@@ -10,9 +10,15 @@ import { createClient } from "@supabase/supabase-js";
 Deno.serve(async (req: Request) => {
   const { method } = req;
 
+  const authHeader = req.headers.get("Authorization");
+
+  if (!authHeader) {
+    throw new Error("Authorization header is required");
+  }
+
   const sbClient = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? "",
+    Deno.env.get("SUPABASE_ANON_KEY") ?? "",
     {
       global: { headers: { Authorization: req.headers.get("Authorization")! } },
     }
