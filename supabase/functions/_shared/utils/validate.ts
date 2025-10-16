@@ -1,17 +1,20 @@
 import { AnyObject, ObjectSchema, ValidationError } from "yup";
 import { ErrorCodes, apiError } from "./errors.ts";
 import { CompleteRequest, RequestMethod } from "./requests.ts";
-import { SBClient } from "./types.ts";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 export const getRequestParams = (req: Request) =>
   Object.fromEntries([...new URL(req.url).searchParams]);
 
 export const validate =
   <T extends AnyObject>(
-    handler: (req: CompleteRequest, sbClient: SBClient) => Promise<Response>,
+    handler: (
+      req: CompleteRequest,
+      sbClient: SupabaseClient
+    ) => Promise<Response>,
     schema: ObjectSchema<T>
   ) =>
-  async (req: Request, sbClient: SBClient) => {
+  async (req: Request, sbClient: SupabaseClient) => {
     try {
       const { method, url } = req;
       const request = new CompleteRequest();
