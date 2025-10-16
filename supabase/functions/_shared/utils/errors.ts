@@ -3,6 +3,7 @@ import { PostgrestError } from "https://esm.sh/v135/@supabase/postgrest-js@1.8.6
 
 export const enum ErrorCodes {
   BAD_REQUEST = 400,
+  UNAUTHORIZED = 401,
   FORBIDDEN = 403,
   NOT_FOUND = 404,
   NOT_ACCEPTABLE = 406,
@@ -11,6 +12,7 @@ export const enum ErrorCodes {
 
 export const ERRORS_MAPPING = {
   [ErrorCodes.BAD_REQUEST]: "Bad Request.",
+  [ErrorCodes.UNAUTHORIZED]: "Unauthorized.",
   [ErrorCodes.NOT_FOUND]: "Not Found.",
   [ErrorCodes.SERVER_ERROR]: "Internal Server Error.",
   [ErrorCodes.FORBIDDEN]: "Forbidden.",

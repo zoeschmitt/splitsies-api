@@ -30,7 +30,14 @@ const handler = async (
       .from("groups")
       .insert([{ name, badge }]);
 
-    if (error) throw error;
+    if (error) {
+      if (error?.code === "42501") {
+        return apiError(ErrorCodes.UNAUTHORIZED, {
+          error: "Insufficient permissions.",
+        });
+      }
+      throw error;
+    }
 
     // Return list of possible ppl to add to group.
 
