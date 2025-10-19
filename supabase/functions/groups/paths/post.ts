@@ -3,7 +3,7 @@ import { ErrorCodes, apiError } from "../../_shared/utils/errors.ts";
 import { validate } from "../../_shared/utils/validate.ts";
 import { ObjectSchema, object, string } from "yup";
 import { CORSResponse } from "../../_shared/utils/cors.ts";
-import { SupabaseClient } from "@supabase/supabase-js";
+import { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 
 interface Req {
   body: {
@@ -24,29 +24,25 @@ const handler = async (
   sbClient: SupabaseClient
 ): Promise<Response> => {
   try {
-    // Add group to db.
     const { name, badge } = req.body;
-    const { data, error } = await sbClient
-      .from("groups")
-      .insert([{ name, badge }]);
+    const { error } = await sbClient.from("groups").insert([{ name, badge }]);
 
-    if (error) {
-      if (error?.code === "42501") {
-        return apiError(ErrorCodes.UNAUTHORIZED, {
-          error: "Insufficient permissions.",
-        });
-      }
-      throw error;
-    }
+    if (error) throw error;
 
-    // Return list of possible ppl to add to group.
+    // TODO: Return list of possible ppl to add to group.
 
-    return new CORSResponse({
+    return new CORSResponse(null, {
       status: 200,
-      body: { group: data?.[0] },
     });
   } catch (error) {
     console.error("error:", error);
+
+    if (error instanceof PostgrestError && error?.code === "42501") {
+      return apiError(ErrorCodes.UNAUTHORIZED, {
+        error: "Insufficient permissions.",
+      });
+    }
+
     return apiError(ErrorCodes.SERVER_ERROR, error);
   }
 };
