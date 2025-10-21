@@ -1,5 +1,6 @@
 import { CORSResponse } from "./cors.ts";
-import { PostgrestError } from "https://esm.sh/v135/@supabase/postgrest-js@1.8.6/dist/module/index.js";
+import { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
+import { CompleteRequest } from "./requests.ts";
 
 export const enum ErrorCodes {
   BAD_REQUEST = 400,
@@ -20,6 +21,28 @@ export const ERRORS_MAPPING = {
 };
 
 type ApiError = Record<string, unknown> | unknown;
+
+type HandlerFn<T = any> = (req: CompleteRequest, sbClient: SupabaseClient) => Promise<T>;
+
+export const withErrorHandling = (fn: HandlerFn) => {
+  return async (req: CompleteRequest, sbClient: SupabaseClient) => {
+    try {
+      return await fn(req, sbClient);
+    } catch (error: unknown) {
+      console.error("error:", error);
+
+      if (error && typeof error === "object" && "code" in error) {
+        const code = (error as any).code;
+        if (code === "42501") {
+          return apiError(ErrorCodes.UNAUTHORIZED, { error: "Insufficient permissions." });
+        }
+        return apiError(ErrorCodes.SERVER_ERROR, { error });
+      }
+
+      return apiError(ErrorCodes.SERVER_ERROR, { error });
+    }
+  };
+}
 
 export const apiError = (code: ErrorCodes, err?: ApiError) => {
   let error: ApiError;
