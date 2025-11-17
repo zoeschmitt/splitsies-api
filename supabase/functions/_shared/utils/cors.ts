@@ -14,6 +14,6 @@ export class CORSResponse extends Response {
 
     headers["Content-Type"] ??= "application/json";
 
-    super(body, { ...init, headers });
+    super(JSON.stringify(body), { ...init, headers });
   }
 }

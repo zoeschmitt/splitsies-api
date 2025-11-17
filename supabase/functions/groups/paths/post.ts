@@ -24,15 +24,21 @@ const handler = async (
   sbClient: SupabaseClient
 ): Promise<Response> => {
   const { name, badge } = req.body;
-  const { error } = await sbClient.from("groups").insert([{ name, badge }]);
 
-  if (error) throw error;
+  const { error: err } = await sbClient
+    .from("groups")
+    .insert([{ name, badge }]);
 
+  // if (error) throw error;
+  console.log("Error details:", JSON.stringify(err, null, 2));
   // TODO: Return list of possible ppl to add to group.
 
-  return new CORSResponse(null, {
-    status: 200,
-  });
+  return new CORSResponse(
+    {},
+    {
+      status: 200,
+    }
+  );
 };
 
 export const postGroups = validate(withErrorHandling(handler), schema);
