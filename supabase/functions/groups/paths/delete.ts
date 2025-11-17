@@ -1,31 +1,50 @@
 import { CompleteRequest } from "../../_shared/utils/requests.ts";
-import { ErrorCodes, apiError } from "../../_shared/utils/errors.ts";
+import { withErrorHandling } from "../../_shared/utils/errors.ts";
 import { validate } from "../../_shared/utils/validate.ts";
-import { ObjectSchema, object } from "yup";
+import { ObjectSchema, object, string } from "yup";
 import { CORSResponse } from "../../_shared/utils/cors.ts";
+import { SupabaseClient } from "@supabase/supabase-js";
 
-type Req = Record<string | number | symbol, unknown>;
-const schema: ObjectSchema<Req> = object();
+interface Req {
+  params: {
+    groupId: string;
+  };
+}
 
-const handler = async (req: CompleteRequest): Promise<Response> => {
-  try {
-    const { pathname } = new URL(req.url);
+const schema: ObjectSchema<Req> = object({
+  params: object({
+    groupId: string().uuid().required(),
+  }),
+});
 
-    // if (!copilotId) {
-    //   throw new Error("Invalid copilotId");
-    // }
+const handler = async (
+  req: CompleteRequest,
+  sbClient: SupabaseClient
+): Promise<Response> => {
+  const { groupId } = req.params;
 
-    // if (copilot.userId && user?.id !== copilot.userId) {
-    //   return apiError(ErrorCodes.FORBIDDEN, {
-    //     error: "A different user owns this copilot.",
-    //   });
-    // }
+  console.log("Deleting group with ID:", groupId);
 
-    return new CORSResponse();
-  } catch (error) {
-    console.error("error:", error);
-    return apiError(ErrorCodes.SERVER_ERROR, error);
-  }
+  const { data, error } = await sbClient
+    .from("groups")
+    .delete()
+    .eq("id", groupId);
+
+  console.log("Delete group data:", data);
+  console.log("Delete group error:", error);
+
+  if (error) throw error;
+
+  const { error: memberError } = await sbClient
+    .from("group_members")
+    .delete()
+    .eq("group_id", groupId);
+
+  if (memberError) throw memberError;
+
+  return new CORSResponse({}, {
+    status: 200,
+  });
 };
 
-export const deleteGroups = validate(handler, schema);
+export const deleteGroups = validate(withErrorHandling(handler), schema);
