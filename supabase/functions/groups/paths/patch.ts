@@ -37,14 +37,14 @@ const handler = async (
     ...(badge && { badge }),
   };
 
-  const { data, error } = await sbClient
+  const { error } = await sbClient
     .from("groups")
     .update(updates)
     .eq("id", groupId);
 
   if (error) throw error;
 
-  return new CORSResponse(data, {
+  return new CORSResponse({}, {
     status: 200,
   });
 };
