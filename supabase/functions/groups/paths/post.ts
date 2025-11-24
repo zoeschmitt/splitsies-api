@@ -25,20 +25,60 @@ const handler = async (
 ): Promise<Response> => {
   const { name, badge } = req.body;
 
-  const { error: err } = await sbClient
-    .from("groups")
-    .insert([{ name, badge }]);
+  const {
+    data: { user },
+    error: userError,
+  } = await sbClient.auth.getUser();
 
-  // if (error) throw error;
-  console.log("Error details:", JSON.stringify(err, null, 2));
-  // TODO: Return list of possible ppl to add to group.
+  if (userError || !user) {
+    throw new Error("User not authenticated");
+  }
 
-  return new CORSResponse(
-    {},
-    {
-      status: 200,
-    }
-  );
+  const userId = user.id;
+
+  const { error } = await sbClient.from("groups").insert([{ name, badge }]);
+
+  if (error) throw error;
+
+  const { data: expenseUsers, error: expenseError } = await sbClient
+    .from("expense_members")
+    .select(
+      `
+      user_id,
+      expenses!inner(
+        expense_members!inner(user_id)
+      )
+    `
+    )
+    .eq("expenses.expense_members.user_id", userId)
+    .neq("user_id", userId);
+
+  if (expenseError) {
+    console.error("Error fetching expense users:", expenseError);
+  }
+
+  const uniqueUserIds = [
+    ...new Set(expenseUsers?.map((item) => item.user_id) || []),
+  ];
+
+  const { data: userProfiles, error: profileError } = await sbClient
+    .from("profiles")
+    .select("id, name")
+    .in("id", uniqueUserIds);
+
+  if (profileError) {
+    console.error("Error fetching user profiles:", profileError);
+  }
+
+  const suggestedUsers =
+    userProfiles?.map((profile) => ({
+      user_id: profile.id,
+      name: profile.name,
+    })) || [];
+
+  return new CORSResponse(suggestedUsers, {
+    status: 200,
+  });
 };
 
 export const postGroups = validate(withErrorHandling(handler), schema);
