@@ -4,6 +4,7 @@ import { CORSResponse } from "../_shared/utils/cors.ts";
 import { getExpenses } from "./paths/get.ts";
 import { postExpenses } from "./paths/post.ts";
 import { patchExpenses } from "./paths/patch.ts";
+import { deleteExpenses } from "./paths/delete.ts";
 import { createClient } from "@supabase/supabase-js";
 import { getTotalExpenses } from "./paths/total/get.ts";
 
@@ -47,6 +48,8 @@ Deno.serve(async (req: Request) => {
       return await postExpenses(req, sbClient);
     case RequestMethod.PATCH:
       return await patchExpenses(req, sbClient);
+    case RequestMethod.DELETE:
+      return await deleteExpenses(req, sbClient);
     case RequestMethod.OPTIONS:
       return new CORSResponse("ok");
     default:
