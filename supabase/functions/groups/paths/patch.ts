@@ -84,10 +84,7 @@ const handler = async (
     .select(
       `
       *,
-      group_members(
-        user_id,
-        profiles(name)
-      )
+      group_members(user_id)
     `
     )
     .eq("id", groupId)
