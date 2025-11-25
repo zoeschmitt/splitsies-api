@@ -33,16 +33,17 @@ const handler = async (
   req: CompleteRequest,
   sbClient: SupabaseClient
 ): Promise<Response> => {
-  const { groupId, title, total, payerId, memberIds } = req.body;
+  const { groupId } = req.params;
+  const { title, total, payerId, memberIds } = req.body;
 
   const { data: expenseData, error: expenseError } = await sbClient
     .from("expenses")
     .insert([
       {
-        groupId,
-        title,
-        total,
-        payerId,
+        group_id: groupId,
+        title: title,
+        total: total,
+        payer_id: payerId,
       },
     ])
     .select()
