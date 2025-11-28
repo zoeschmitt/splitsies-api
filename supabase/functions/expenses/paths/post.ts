@@ -54,6 +54,7 @@ const handler = async (
   const expenseMembers = memberIds.map((userId: string) => ({
     expense_id: expenseData.id,
     user_id: userId,
+    paid: userId === payerId,
   }));
 
   const { error: membersError } = await sbClient

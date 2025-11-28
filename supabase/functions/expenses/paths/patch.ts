@@ -13,7 +13,6 @@ interface Req {
     title?: string;
     total?: number;
     memberIds?: string[];
-    paid?: boolean;
   };
 }
 
@@ -25,7 +24,6 @@ const schema: ObjectSchema<Req> = object({
     title: string().optional(),
     total: number().positive().optional(),
     memberIds: array().of(string().uuid().required()).optional(),
-    paid: boolean().optional(),
   }).required(),
 });
 
@@ -34,7 +32,7 @@ const handler = async (
   sbClient: SupabaseClient
 ): Promise<Response> => {
   const { expenseId } = req.params;
-  const { title, total, memberIds, paid } = req.body;
+  const { title, total, memberIds } = req.body;
 
   const {
     data: { user },
@@ -50,27 +48,30 @@ const handler = async (
   // First, verify the expense exists and the user has permission to edit it
   const { data: existingExpense, error: fetchError } = await sbClient
     .from("expenses")
-    .select(`
+    .select(
+      `
       *,
       expense_members!inner(user_id)
-    `)
+    `
+    )
     .eq("id", expenseId)
     .eq("expense_members.user_id", userId)
     .single();
 
   if (fetchError || !existingExpense) {
-    throw new Error("Expense not found or you don't have permission to edit it");
+    console.log({ fetchError, existingExpense });
+    throw new Error(
+      "Expense not found or you don't have permission to edit it"
+    );
   }
 
   // Build update object for expense table
   const expenseUpdates: Partial<{
     title: string;
     total: number;
-    paid: boolean;
   }> = {};
   if (title !== undefined) expenseUpdates.title = title;
   if (total !== undefined) expenseUpdates.total = total;
-  if (paid !== undefined) expenseUpdates.paid = paid;
 
   // Update expense if there are changes
   if (Object.keys(expenseUpdates).length > 0) {
@@ -84,6 +85,18 @@ const handler = async (
 
   // Update expense members if provided
   if (memberIds !== undefined) {
+    // Get existing paid status for all current members
+    const { data: existingMembers } = await sbClient
+      .from("expense_members")
+      .select("user_id, paid")
+      .eq("expense_id", expenseId);
+
+    // Create a map of user_id -> paid status
+    const paidStatusMap = new Map();
+    existingMembers?.forEach((member) => {
+      paidStatusMap.set(member.user_id, member.paid);
+    });
+
     // Delete existing members
     const { error: deleteError } = await sbClient
       .from("expense_members")
@@ -92,12 +105,14 @@ const handler = async (
 
     if (deleteError) throw deleteError;
 
-    // Insert new members
     if (memberIds.length > 0) {
-      const newMembers = memberIds.map((userId: string) => ({
+      // Use Set to ensure no duplicates and always include current user
+      const allMemberIds = new Set([...memberIds, userId]);
+
+      const newMembers = Array.from(allMemberIds).map((memberId: string) => ({
         expense_id: expenseId,
-        user_id: userId,
-        paid: false, // Reset paid status for all members when updating
+        user_id: memberId,
+        paid: paidStatusMap.get(memberId) || false, // Preserve existing paid status or default to false
       }));
 
       const { error: insertError } = await sbClient
@@ -111,11 +126,13 @@ const handler = async (
   // Return the updated expense with members
   const { data: updatedExpense, error: finalFetchError } = await sbClient
     .from("expenses")
-    .select(`
+    .select(
+      `
       *,
       expense_members(user_id, paid),
       groups(name)
-    `)
+    `
+    )
     .eq("id", expenseId)
     .single();
 
