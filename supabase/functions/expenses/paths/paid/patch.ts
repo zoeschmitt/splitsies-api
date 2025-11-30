@@ -5,14 +5,9 @@ import { ObjectSchema, object, string, boolean } from "yup";
 import { CORSResponse } from "../../../_shared/utils/cors.ts";
 import { SupabaseClient } from "@supabase/supabase-js";
 
-interface ExpenseMemberUser {
-  user_id: string;
-}
-
 interface Req {
   params: {
     expenseId: string;
-    userId: string;
   };
   body: {
     paid: boolean;
@@ -49,9 +44,6 @@ const handler = async (
   const currentUserId = user.id;
 
   // Verify the current user has permission to update this expense member
-  // They must be either:
-  // 1. The user whose paid status is being updated, OR
-  // 2. A member of the same expense
   const { data: expenseMember, error: memberError } = await sbClient
     .from("expense_members")
     .select(`
@@ -69,12 +61,7 @@ const handler = async (
     throw new Error("Expense member not found");
   }
 
-  // Check if current user is part of this expense
-  const isCurrentUserInExpense = expenseMember.expenses.expense_members.some(
-    (member: ExpenseMemberUser) => member.user_id === currentUserId
-  );
-
-  if (!isCurrentUserInExpense && currentUserId !== userId) {
+  if (currentUserId !== userId) {
     throw new Error("You don't have permission to update this expense member");
   }
 
